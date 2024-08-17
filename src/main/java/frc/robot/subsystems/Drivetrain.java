@@ -92,8 +92,7 @@ public class Drivetrain extends SubsystemBase {
         m_leftSideSpeed  = 0.0;
         m_rightSideSpeed = 0.0;
 
-        m_leftFrontMotor.stopMotor();       // just a sefety
-         thing - they shoudl be stopped on instantiation
+        m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
     }
 
