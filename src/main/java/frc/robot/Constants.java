@@ -17,7 +17,7 @@ public final class Constants {
     public static final int kDriverControllerPort = 0;
   }
 
-  public static class DriveConstants {
+  public static class DrivetrainConstants {
     // if the motor will be controlled via a CANbus connected controller, we need to know the
     // CANbus ID to use for the various constructors
     //
