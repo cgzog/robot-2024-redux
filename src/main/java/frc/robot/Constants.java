@@ -16,4 +16,20 @@ public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
   }
+
+  public static class DriveConstants {
+    public static final int kDriveLeftFront_CANID  = 10;
+    public static final int kDriveLeftRear_CANID   = 11;
+    public static final int kDriveRightFront_CANID = 12;
+    public static final int kDriveRightRear_CANID  = 13;
+  }
+
+  public static class IntakeConstants {
+    
+  }
+
+  public static class ShooterConstants {
+ 
+  }
+
 }
