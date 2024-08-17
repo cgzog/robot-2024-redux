@@ -13,7 +13,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
-import frc.robot.Constants;
+
+// pickup constants we need for the drivetrain
+
 import frc.robot.Constants.DrivetrainConstants;
 
 
@@ -55,6 +57,18 @@ public class Drivetrain extends SubsystemBase {
         m_rightRearMotor.restoreFactoryDefaults();
 
 
+        // since the motors are facing in the opposite direction, one side needs to be reversed
+        //
+        // if we consider the "left" side as we look from the rear of the robot (like we were driving it),
+        // then when the left is turning "forward", the right side needs to turn "backwards" on a differential
+        // drivetrain
+        //
+        // we only need to set the right front motor as the rear motors will all be set to follow their
+        // the front motors on their respective side
+
+        m_rightFrontMotor.setInverted(true);
+
+
         // since we have two motors on each side, we'll make the rear motors follow the fronts
         //
         // that way we only send speed comnmands to the front motors and the rears will do the same
@@ -73,14 +87,14 @@ public class Drivetrain extends SubsystemBase {
 
         // make sure all the motors are stopped
         //
-        // we'll consider it as a tank drive right now so we can set each side to a specific speed
-        // in this situation - we can always use it as an Arcade drive later as they are both
-        // part of the differential drive class
+        // the speed values will get updated each time the speed is set
 
         m_leftSideSpeed  = 0.0;
         m_rightSideSpeed = 0.0;
 
-        m_diffDrive.tankDrive(m_leftSideSpeed, m_rightSideSpeed);
+        m_leftFrontMotor.stopMotor();       // just a sefety
+         thing - they shoudl be stopped on instantiation
+        m_rightFrontMotor.stopMotor();
     }
 
   /**
