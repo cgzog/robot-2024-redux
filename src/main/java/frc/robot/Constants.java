@@ -18,6 +18,15 @@ public final class Constants {
   }
 
   public static class DriveConstants {
+    // if the motor will be controlled via a CANbus connected controller, we need to know the
+    // CANbus ID to use for the various constructors
+    //
+    // IMPORTANT:  This not only needs to be set in the code but the actual motor controller
+    // will need to be configured to the correct CANbus address so it will respond to the code
+    // as expected - this is done outsiode of the robot code and is typically done by a
+    // vendor supplied tool specific to the brand of controller being used (REV Hardware Client
+    // for REV Robotics SparkMax controllers for example)
+    
     public static final int kDriveLeftFront_CANID  = 10;
     public static final int kDriveLeftRear_CANID   = 11;
     public static final int kDriveRightFront_CANID = 12;
@@ -25,7 +34,7 @@ public final class Constants {
   }
 
   public static class IntakeConstants {
-    
+
   }
 
   public static class ShooterConstants {
