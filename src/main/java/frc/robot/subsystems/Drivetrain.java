@@ -19,9 +19,14 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 import frc.robot.Constants.DrivetrainConstants;
 
 
+// the first comment in the definition is picked up and displayed as information about this objecty when you
+// hover over it in the editor
 
 public class Drivetrain extends SubsystemBase {
 
+/**
+ * The Drivetrain subsystem provides all of the methods for driving the robot
+ */
     private DifferentialDrive m_diffDrive;
 
     private CANSparkMax m_leftFrontMotor;
@@ -29,8 +34,8 @@ public class Drivetrain extends SubsystemBase {
     private CANSparkMax m_rightFrontMotor;
     private CANSparkMax m_rightRearMotor;
 
-    private double m_leftSideSpeed;
-    private double m_rightSideSpeed;
+    private boolean m_driveTypeErrorPrinted = false;
+
 
 
     public Drivetrain() {
@@ -85,16 +90,68 @@ public class Drivetrain extends SubsystemBase {
         m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);
 
 
-        // make sure all the motors are stopped
-        //
-        // the speed values will get updated each time the speed is set
-
-        m_leftSideSpeed  = 0.0;
-        m_rightSideSpeed = 0.0;
-
         m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
     }
+
+
+
+    public void drive(double val1, double val2, int driveType) {
+
+        switch(driveType) {
+          
+            case DrivetrainConstants.kDriveArcade:
+
+                // invert the side to side joystick
+                m_diffDrive.arcadeDrive(val1, -val2, DrivetrainConstants.kDriveSqInputs);
+                break;
+
+            case DrivetrainConstants.kDriveTank:
+
+                m_diffDrive.tankDrive(val1, val2, DrivetrainConstants.kDriveSqInputs);
+                break;
+
+            case DrivetrainConstants.kDriveCurvature:
+
+                // curvatureDrive controls the rate of turning related to the robot speed
+                //
+                // it does not have a square input flag but I still think it's valuable so we'll manually apply it here
+
+                if (val1 < 0.0) {
+                  val1 *= val1 * -1.0;    // maintain the sign as negative
+                } else {
+                  val1 *= val1;
+                }
+
+                if (val2 < 0.0) {
+                  val2 *= val2 * -1.0;
+                } else {
+                  val2 *= val2;
+                }
+
+                // enable turn in place
+                m_diffDrive.curvatureDrive(val1, val2, true);
+                break;
+
+            default:
+
+              // only need to print the message once when we encounter this error
+              //
+              // in the event of an invalid drive type, we will basically ignore this call
+              if (m_driveTypeErrorPrinted != true) {
+                  String errMsg;
+              
+                  errMsg = "Drivetrain: Drive: invalid drive type " + driveType;
+              
+                  System.err.println(errMsg);
+
+                  m_driveTypeErrorPrinted = true;
+              }
+              break;
+          }
+    }
+
+
 
   /**
    * Example command factory method.
@@ -134,11 +191,11 @@ public class Drivetrain extends SubsystemBase {
 
   public double getLeftSpeed() {
 
-    return m_leftSideSpeed;
+    return m_leftFrontMotor.get();
   }
 
   public double getRightSpeed() {
 
-    return m_rightSideSpeed;
+    return m_rightFrontMotor.get();
   }
 }

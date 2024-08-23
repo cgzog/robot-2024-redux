@@ -8,6 +8,10 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
+import frc.robot.Constants;
+import frc.robot.Constants.DrivetrainConstants;
+import frc.robot.subsystems.Drivetrain;
+
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -81,7 +85,35 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+
+    double leftY, rightX, rightY;   // we don't get leftX since none of the supported drive modes for now need it - saves a litle time
+
+    // we always need the leftY value so we'll get it unconditionally
+    //
+    // we only get the right values for the specific drive mode that needs them to save a little time
+    
+    leftY = -m_robotContainer.m_driverController.getLeftY();     // invert since it returns negative for forward
+
+    switch (DrivetrainConstants.kDriveType) {
+
+      case DrivetrainConstants.kDriveArcade:    // both are handled the same
+      case DrivetrainConstants.kDriveCurvature:
+
+        rightX = m_robotContainer.m_driverController.getRightX();
+
+        m_robotContainer.m_drivetrain.drive(leftY, rightX, DrivetrainConstants.kDriveType);
+        break;
+
+      case DrivetrainConstants.kDriveTank:
+
+        rightY = -m_robotContainer.m_driverController.getRightY();   // invert
+
+        m_robotContainer.m_drivetrain.drive(leftY, rightY, DrivetrainConstants.kDriveType);
+        break;
+      }
+      
+    }
 
   @Override
   public void testInit() {

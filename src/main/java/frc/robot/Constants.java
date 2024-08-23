@@ -23,7 +23,7 @@ public final class Constants {
     //
     // IMPORTANT:  This not only needs to be set in the code but the actual motor controller
     // will need to be configured to the correct CANbus address so it will respond to the code
-    // as expected - this is done outsiode of the robot code and is typically done by a
+    // as expected - this is done outside of the robot code and is typically done by a
     // vendor supplied tool specific to the brand of controller being used (REV Hardware Client
     // for REV Robotics SparkMax controllers for example)
     
@@ -31,6 +31,14 @@ public final class Constants {
     public static final int kDriveLeftRear_CANID   = 11;
     public static final int kDriveRightFront_CANID = 12;
     public static final int kDriveRightRear_CANID  = 13;
+
+    public static final int kDriveArcade       = 0;
+    public static final int kDriveTank         = 1;
+    public static final int kDriveCurvature    = 2;
+
+    public static final int kDriveType         = kDriveArcade;
+
+    public static final boolean kDriveSqInputs = true;
   }
 
   public static class IntakeConstants {
