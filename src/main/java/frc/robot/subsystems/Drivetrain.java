@@ -1,11 +1,20 @@
 package frc.robot.subsystems;
 
+
+import edu.wpi.first.wpilibj.RobotBase;
+
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
-// general FRC imports
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import edu.wpi.first.wpilibj.simulation.EncoderSim;
+import edu.wpi.first.math.system.plant.DCMotor;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N7;
 
 
 // SparkMax imports - these come from REV Robotics
@@ -13,10 +22,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
+// our robot constants
 
-// pickup constants we need for the drivetrain
-
+import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.DrivetrainConstants;
+
 
 
 // the first comment in the definition is picked up and displayed as information about this objecty when you
@@ -27,12 +37,24 @@ public class Drivetrain extends SubsystemBase {
 /**
  * The Drivetrain subsystem provides all of the methods for driving the robot
  */
-    private DifferentialDrive m_diffDrive;
+    
 
-    private CANSparkMax m_leftFrontMotor;
-    private CANSparkMax m_leftRearMotor;
-    private CANSparkMax m_rightFrontMotor;
-    private CANSparkMax m_rightRearMotor;
+    private CANSparkMax m_leftFrontMotor  = new CANSparkMax(DrivetrainConstants.kDriveLeftFront_CANID,  MotorType.kBrushless);
+    private CANSparkMax m_leftRearMotor   = new CANSparkMax(DrivetrainConstants.kDriveLeftRear_CANID,   MotorType.kBrushless);
+    private CANSparkMax m_rightFrontMotor = new CANSparkMax(DrivetrainConstants.kDriveRightFront_CANID, MotorType.kBrushless);
+    private CANSparkMax m_rightRearMotor  = new CANSparkMax(DrivetrainConstants.kDriveRightRear_CANID, MotorType.kBrushless);
+
+    private final DifferentialDrive         m_diffDrive    = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
+
+    private final Matrix<N7, N1> m_measurementStdDevs =  { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };   // "perfect" - no std devs - need to measure this in real life
+
+    private final DifferentialDrivetrainSim m_diffDriveSim = new DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
+                                                                                           DrivetrainConstants.kDrivetrainGearRatio,
+                                                                                           RobotConstants.kRobotInertia,
+                                                                                           RobotConstants.kRobotMassKg,
+                                                                                           DrivetrainConstants.kDrivetrainWheelRadiusMeters,
+                                                                                           DrivetrainConstants.kDrivetrainTrackMeters,
+                                                                                           m_measurementStdDevs); // measurement std devs
 
     private boolean m_driveTypeErrorPrinted = false;
 
@@ -40,19 +62,12 @@ public class Drivetrain extends SubsystemBase {
 
     public Drivetrain() {
 
-        // initialize the controllers
-
-        m_leftFrontMotor  = new CANSparkMax(DrivetrainConstants.kDriveLeftFront_CANID, MotorType.kBrushless);
-        m_leftRearMotor   = new CANSparkMax(DrivetrainConstants.kDriveLeftRear_CANID, MotorType.kBrushless);
-        m_rightFrontMotor = new CANSparkMax(DrivetrainConstants.kDriveRightFront_CANID, MotorType.kBrushless);
-        m_rightRearMotor  = new CANSparkMax(DrivetrainConstants.kDriveRightRear_CANID, MotorType.kBrushless);
-
         // in general, it's a good idea to set the controller options to WHAT WE WANT
         //
         // like every time
         //
-        // it's OK to use the various configuration tools to come up with the settings we want but one we have
-        // those settings, we want make those settings are in use every time
+        // it's OK to use the various configuration tools to come up with the settings we want but once we have
+        // those settings, we want make sure those settings are in use every time
         //
         // to get there, we'll reset the controllers to factory defaults and then explicitly set what we need
 
@@ -84,12 +99,6 @@ public class Drivetrain extends SubsystemBase {
         m_leftRearMotor.follow(m_leftFrontMotor);
         m_rightRearMotor.follow(m_rightFrontMotor);
         
-
-        // create the differential drive using the leading motors - the fronts on each side
-
-        m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);
-
-
         m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
     }
