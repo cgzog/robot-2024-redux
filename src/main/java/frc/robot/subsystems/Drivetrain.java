@@ -61,11 +61,11 @@ public class Drivetrain extends SubsystemBase {
 
     private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
 
+    /*
     // for now, we'll just make everything close to "perfect" - would need to measure this in real life using 'sysinfo'
 
     private final Matrix<N7, N1> m_measurementStdDevs = VecBuilder.fill(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01);
 
-    /*
     private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
                                                                                        DrivetrainConstants.kDrivetrainGearRatio,
                                                                                        RobotConstants.kRobotInertia,
@@ -79,7 +79,7 @@ public class Drivetrain extends SubsystemBase {
                                                                                                        DifferentialDrivetrainSim.KitbotGearing.k10p71,
                                                                                                        DifferentialDrivetrainSim.KitbotWheelSize.kSixInch,
                                                                                                        null);
-                                                                                                       
+
     // dummy encoders to instantiate the simulated encoders - can't seem to do that from the SparkMax built-in encoder
 
     private final Encoder m_leftDummyEncoder  = new Encoder(DrivetrainConstants.kLeftEncoderADio,  DrivetrainConstants.kLeftEncoderBDio);
