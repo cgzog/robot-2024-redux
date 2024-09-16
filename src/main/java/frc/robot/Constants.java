@@ -20,9 +20,9 @@ public final class Constants {
 
   public static class RobotConstants {
 
-    public static final double kRobotMassKg  = 100.0 / 2.2;  // 100# robot
+    public static final Measure<Mass> kRobotMass = Pounds.of(100.0);
 
-    public static final double kRobotInertia = 5.5;   // not measured for this robot - right in the middle of the typical 3-8 jKgM^2 range
+    public static final double kRobotInertia = 7.0;   // not measured for this robot - typical 3-8 jKgM^2 range
   }
 
   public static class OperatorConstants {
@@ -47,6 +47,11 @@ public final class Constants {
     public static final int kDriveRightFront_CANID = 12;
     public static final int kDriveRightRear_CANID  = 13;
 
+    public static final int kLeftEncoderADio  = 0;      // DIO channels on RoboRIO (should be able to do this using SparkMAX encoder but having simulation trouble)
+    public static final int kLeftEncoderBDio  = 1;
+    public static final int kRightEncoderADio = 2;
+    public static final int kRightEncoderBDio = 3;
+
     public static final int kDriveArcade       = 0;
     public static final int kDriveTank         = 1;
     public static final int kDriveCurvature    = 2;
@@ -57,10 +62,12 @@ public final class Constants {
 
     // physical drivetrain constants
 
-    public static final double kDrivetrainTrackMeters       = 0.75;     // close to the width of the robot - just under 30" here
-    public static final double kDrivetrainWheelbaseMeters   = 0.60;     // right around 24" - wheel base tends to be smaller than track
-    public static final double kDrivetrainWheelRadiusMeters = 0.0762;   // 6in wheel diameter - this is precise
-    public static final double kDrivetrainGearRatio         = 9.13;     // middle of the road Toughbox Mini S gearbox ratio
+    public static final Measure<Distance> kDrivetrainTrack         = Inches.of(29);   // close to the width of the robot - using a typical 30" width
+    public static final Measure<Distance> kDrivetrainWheelbase     = Inches.of(24);   // wheel base tends to be smaller than track
+    public static final Measure<Distance> kDrivetrainWheelDiameter = Inches.of(6);    // 6in wheel diameter
+    public static final double kDrivetrainGearRatio                = 10.71;                     // typical kitbot gear ratio
+
+    public static final int    kDrivetrainPulsesPerWheelRotation = 4096; // typical quadrature encoder - used for simulation
   }
 
   public static class IntakeConstants {

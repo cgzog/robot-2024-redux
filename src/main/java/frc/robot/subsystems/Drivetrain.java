@@ -1,29 +1,41 @@
 package frc.robot.subsystems;
 
 
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.RobotBase;
 
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
+import edu.wpi.first.units.*;
+import static edu.wpi.first.units.Units.*;
+
+
+// simulation-related
+
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
 import edu.wpi.first.wpilibj.simulation.EncoderSim;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.KitbotMotor;
+//import edu.wpi.first.wpilibj.simulation.GyroSim;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N7;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N7;
 
 
 // SparkMax imports - these come from REV Robotics
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
+
 
 // our robot constants
 
+import frc.robot.Robot;
 import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.DrivetrainConstants;
 
@@ -39,22 +51,42 @@ public class Drivetrain extends SubsystemBase {
  */
     
 
-    private CANSparkMax m_leftFrontMotor  = new CANSparkMax(DrivetrainConstants.kDriveLeftFront_CANID,  MotorType.kBrushless);
-    private CANSparkMax m_leftRearMotor   = new CANSparkMax(DrivetrainConstants.kDriveLeftRear_CANID,   MotorType.kBrushless);
-    private CANSparkMax m_rightFrontMotor = new CANSparkMax(DrivetrainConstants.kDriveRightFront_CANID, MotorType.kBrushless);
-    private CANSparkMax m_rightRearMotor  = new CANSparkMax(DrivetrainConstants.kDriveRightRear_CANID, MotorType.kBrushless);
+    private final CANSparkMax m_leftFrontMotor  = new CANSparkMax(DrivetrainConstants.kDriveLeftFront_CANID,  MotorType.kBrushless);
+    private final CANSparkMax m_leftRearMotor   = new CANSparkMax(DrivetrainConstants.kDriveLeftRear_CANID,   MotorType.kBrushless);
+    private final CANSparkMax m_rightFrontMotor = new CANSparkMax(DrivetrainConstants.kDriveRightFront_CANID, MotorType.kBrushless);
+    private final CANSparkMax m_rightRearMotor  = new CANSparkMax(DrivetrainConstants.kDriveRightRear_CANID, MotorType.kBrushless);
 
-    private final DifferentialDrive         m_diffDrive    = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
+    private final RelativeEncoder m_leftEncoder  = m_leftFrontMotor.getEncoder();
+    private final RelativeEncoder m_rightEncoder = m_leftFrontMotor.getEncoder();
 
-    private final Matrix<N7, N1> m_measurementStdDevs =  { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };   // "perfect" - no std devs - need to measure this in real life
+    private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
 
-    private final DifferentialDrivetrainSim m_diffDriveSim = new DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
-                                                                                           DrivetrainConstants.kDrivetrainGearRatio,
-                                                                                           RobotConstants.kRobotInertia,
-                                                                                           RobotConstants.kRobotMassKg,
-                                                                                           DrivetrainConstants.kDrivetrainWheelRadiusMeters,
-                                                                                           DrivetrainConstants.kDrivetrainTrackMeters,
-                                                                                           m_measurementStdDevs); // measurement std devs
+    // for now, we'll just make everything close to "perfect" - would need to measure this in real life using 'sysinfo'
+
+    private final Matrix<N7, N1> m_measurementStdDevs = VecBuilder.fill(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01);
+
+    /*
+    private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
+                                                                                       DrivetrainConstants.kDrivetrainGearRatio,
+                                                                                       RobotConstants.kRobotInertia,
+                                                                                       RobotConstants.kRobotMass.in(Kilograms),
+                                                                                       DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) / 2,
+                                                                                       DrivetrainConstants.kDrivetrainTrack.in(Meters),
+                                                                                       m_measurementStdDevs); // measurement std devs;
+    */
+
+    private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim.createKitbotSim(KitbotMotor.kDoubleNEOPerSide,
+                                                                                                       DifferentialDrivetrainSim.KitbotGearing.k10p71,
+                                                                                                       DifferentialDrivetrainSim.KitbotWheelSize.kSixInch,
+                                                                                                       null);
+                                                                                                       
+    // dummy encoders to instantiate the simulated encoders - can't seem to do that from the SparkMax built-in encoder
+
+    private final Encoder m_leftDummyEncoder  = new Encoder(DrivetrainConstants.kLeftEncoderADio,  DrivetrainConstants.kLeftEncoderBDio);
+    private final Encoder m_rightDummyEncoder = new Encoder(DrivetrainConstants.kRightEncoderADio, DrivetrainConstants.kRightEncoderBDio);
+
+    private final EncoderSim m_leftEncoderSim  = new EncoderSim(m_leftDummyEncoder);
+    private final EncoderSim m_rightEncoderSim = new EncoderSim(m_rightDummyEncoder);
 
     private boolean m_driveTypeErrorPrinted = false;
 
@@ -75,6 +107,9 @@ public class Drivetrain extends SubsystemBase {
         m_leftRearMotor.restoreFactoryDefaults();
         m_rightFrontMotor.restoreFactoryDefaults();
         m_rightRearMotor.restoreFactoryDefaults();
+
+        m_leftEncoder.setPosition(0.0);   // make sure the encoders are zeroed out to start (they should be)
+        m_rightEncoder.setPosition(0.0);
 
 
         // since the motors are facing in the opposite direction, one side needs to be reversed
@@ -101,6 +136,18 @@ public class Drivetrain extends SubsystemBase {
         
         m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
+
+        if ( ! Robot.isReal()) {            // setup things for the simulation as needed
+        
+          // we'll just tell it we have a specific pulse count per rev of the wheel and calculate a distance for each pulse
+          // calculate the wheel circuference and divide but the number of pulses per rotation
+
+          m_leftEncoderSim.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * 3.1415 / DrivetrainConstants.kDrivetrainPulsesPerWheelRotation);
+          m_rightEncoderSim.setDistancePerPulse(m_leftEncoderSim.getDistancePerPulse());    // get what we set; they always should be the same
+
+          m_leftEncoderSim.setCount(0);
+          m_rightEncoderSim.setCount(0);
+        }
     }
 
 
