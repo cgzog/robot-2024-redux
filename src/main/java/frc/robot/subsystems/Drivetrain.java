@@ -1,11 +1,12 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.*;
 
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.RobotBase;
-
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-
+import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.units.*;
 import static edu.wpi.first.units.Units.*;
 
@@ -13,12 +14,15 @@ import static edu.wpi.first.units.Units.*;
 // simulation-related
 
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
-import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.KitbotMotor;
-//import edu.wpi.first.wpilibj.simulation.GyroSim;
+import edu.wpi.first.wpilibj.simulation.EncoderSim;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.simulation.AnalogGyroSim;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.kinematics.Odometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N7;
 
@@ -50,14 +54,16 @@ public class Drivetrain extends SubsystemBase {
  * The Drivetrain subsystem provides all of the methods for driving the robot
  */
     
-
     private final CANSparkMax m_leftFrontMotor  = new CANSparkMax(DrivetrainConstants.kDriveLeftFront_CANID,  MotorType.kBrushless);
     private final CANSparkMax m_leftRearMotor   = new CANSparkMax(DrivetrainConstants.kDriveLeftRear_CANID,   MotorType.kBrushless);
     private final CANSparkMax m_rightFrontMotor = new CANSparkMax(DrivetrainConstants.kDriveRightFront_CANID, MotorType.kBrushless);
     private final CANSparkMax m_rightRearMotor  = new CANSparkMax(DrivetrainConstants.kDriveRightRear_CANID, MotorType.kBrushless);
 
-    private final RelativeEncoder m_leftEncoder  = m_leftFrontMotor.getEncoder();
-    private final RelativeEncoder m_rightEncoder = m_leftFrontMotor.getEncoder();
+    // we're setup to use direect encoders rather than the SparkMax encoders to stay clear of the SparkMax controllers
+    // during simulation
+
+    // private final RelativeEncoder m_leftEncoder  = m_leftFrontMotor.getEncoder();
+    // private final RelativeEncoder m_rightEncoder = m_leftFrontMotor.getEncoder();
 
     private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
 
@@ -72,7 +78,7 @@ public class Drivetrain extends SubsystemBase {
                                                                                        RobotConstants.kRobotMass.in(Kilograms),
                                                                                        DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) / 2,
                                                                                        DrivetrainConstants.kDrivetrainTrack.in(Meters),
-                                                                                       m_measurementStdDevs); // measurement std devs;
+                                                                                       m_measurementStdDevs);
     */
 
     private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim.createKitbotSim(KitbotMotor.kDoubleNEOPerSide,
@@ -80,13 +86,21 @@ public class Drivetrain extends SubsystemBase {
                                                                                                        DifferentialDrivetrainSim.KitbotWheelSize.kSixInch,
                                                                                                        null);
 
-    // dummy encoders to instantiate the simulated encoders - can't seem to do that from the SparkMax built-in encoder
+    // setup some quadrature encoders to instantiate the simulated encoders from - can't seem to do that from the SparkMax built-in encoder
 
-    private final Encoder m_leftDummyEncoder  = new Encoder(DrivetrainConstants.kLeftEncoderADio,  DrivetrainConstants.kLeftEncoderBDio);
-    private final Encoder m_rightDummyEncoder = new Encoder(DrivetrainConstants.kRightEncoderADio, DrivetrainConstants.kRightEncoderBDio);
+    private final Encoder m_leftEncoder  = new Encoder(DrivetrainConstants.kLeftEncoderADio,  DrivetrainConstants.kLeftEncoderBDio);
+    private final Encoder m_rightEncoder = new Encoder(DrivetrainConstants.kRightEncoderADio, DrivetrainConstants.kRightEncoderBDio);
 
-    private final EncoderSim m_leftEncoderSim  = new EncoderSim(m_leftDummyEncoder);
-    private final EncoderSim m_rightEncoderSim = new EncoderSim(m_rightDummyEncoder);
+    private final EncoderSim m_leftEncoderSim  = new EncoderSim(m_leftEncoder);
+    private final EncoderSim m_rightEncoderSim = new EncoderSim(m_rightEncoder);
+
+    private AnalogGyro m_gyro = new AnalogGyro(1);
+    private AnalogGyroSim m_gyroSim = new AnalogGyroSim(m_gyro);
+
+    private Field2d m_field = new Field2d();
+
+    private Odometry m_odometry = new Odometry<WheelPositions<T>>(null, null, null, null);
+
 
     private boolean m_driveTypeErrorPrinted = false;
 
@@ -108,8 +122,8 @@ public class Drivetrain extends SubsystemBase {
         m_rightFrontMotor.restoreFactoryDefaults();
         m_rightRearMotor.restoreFactoryDefaults();
 
-        m_leftEncoder.setPosition(0.0);   // make sure the encoders are zeroed out to start (they should be)
-        m_rightEncoder.setPosition(0.0);
+        m_leftEncoder.reset();   // make sure the encoders are zeroed out to start (they should be)
+        m_rightEncoder.reset();
 
 
         // since the motors are facing in the opposite direction, one side needs to be reversed
@@ -137,12 +151,14 @@ public class Drivetrain extends SubsystemBase {
         m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
 
+        SmartDashboard.putData("Field", m_field);     // display the field overhead view
+
         if ( ! Robot.isReal()) {            // setup things for the simulation as needed
         
           // we'll just tell it we have a specific pulse count per rev of the wheel and calculate a distance for each pulse
           // calculate the wheel circuference and divide but the number of pulses per rotation
 
-          m_leftEncoderSim.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * 3.1415 / DrivetrainConstants.kDrivetrainPulsesPerWheelRotation);
+          m_leftEncoderSim.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * Math.PI / DrivetrainConstants.kDrivetrainEncoderResolution);
           m_rightEncoderSim.setDistancePerPulse(m_leftEncoderSim.getDistancePerPulse());    // get what we set; they always should be the same
 
           m_leftEncoderSim.setCount(0);
@@ -223,6 +239,8 @@ public class Drivetrain extends SubsystemBase {
         });
   }
 
+
+
   /**
    * An example method querying a boolean state of the subsystem (for example, a digital sensor).
    *
@@ -233,15 +251,44 @@ public class Drivetrain extends SubsystemBase {
     return false;
   }
 
+
+
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    // This will get the simulated sensor readings that we set
+    // in the previous article while in simulation, but will use
+    // real values on the robot itself.
+    m_odometry.update(m_gyro.getRotation2d(),
+                      m_leftEncoder.getDistance(),
+                      m_rightEncoder.getDistance());
+
+    m_field.setRobotPose(m_odometry.getPoseMeters());
   }
+
+
 
   @Override
   public void simulationPeriodic() {
-    // This method will be called once per scheduler run during simulation
+
+    m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage(),
+                             getRightSpeed() * RobotController.getInputVoltage());
+
+    // Advance the model by 20 ms. Note that if you are running this
+    // subsystem in a separate thread or have changed the nominal timestep
+    // of TimedRobot, this value needs to match it.
+    m_diffDriveSim.update(0.02);
+
+    // Update all of our sensors.
+    m_leftEncoderSim.setDistance(m_diffDriveSim.getLeftPositionMeters());
+    m_leftEncoderSim.setRate(m_diffDriveSim.getLeftVelocityMetersPerSecond());
+
+    m_rightEncoderSim.setDistance(m_diffDriveSim.getRightPositionMeters());
+    m_rightEncoderSim.setRate(m_diffDriveSim.getRightVelocityMetersPerSecond());
+
+    m_gyroSim.setAngle(-m_diffDriveSim.getHeading().getDegrees());
   }
+
+
 
   // be able to get the current speeds for logging and dashboard use
 
@@ -249,6 +296,7 @@ public class Drivetrain extends SubsystemBase {
 
     return m_leftFrontMotor.get();
   }
+
 
   public double getRightSpeed() {
 
