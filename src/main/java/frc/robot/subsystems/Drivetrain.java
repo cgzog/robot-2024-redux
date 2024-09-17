@@ -19,12 +19,16 @@ import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.simulation.AnalogGyroSim;
+
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.kinematics.Odometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N7;
+import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -99,8 +103,15 @@ public class Drivetrain extends SubsystemBase {
 
     private Field2d m_field = new Field2d();
 
-    private Odometry m_odometry = new Odometry<WheelPositions<T>>(null, null, null, null);
+    private DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(m_gyro.GetRotation2d(),
+                                                                                 m_leftEncoder.getDistance(),
+                                                                                 m_rightEncoder.getDistance(),
+                                                                                 // 1M from wall, midfield, pointing towards other alliance
+                                                                                 new Pose2d(1.0, 13.5, new Rotation2d()));
 
+    private DifferentialDriveKinematics m_diffDriveKinematics = new DifferentialDriveKinematics(DrivetrainConstants.kDrivetrainTrack.in(Meters));
+
+    private Pose2d m_pose;
 
     private boolean m_driveTypeErrorPrinted = false;
 
@@ -261,6 +272,10 @@ public class Drivetrain extends SubsystemBase {
     m_odometry.update(m_gyro.getRotation2d(),
                       m_leftEncoder.getDistance(),
                       m_rightEncoder.getDistance());
+
+    m_pose.update(m_gyro.getRotation2d(),
+                  m_leftEncoder.getDistance(),
+                  m_rightEncoder.getDistance())
 
     m_field.setRobotPose(m_odometry.getPoseMeters());
   }

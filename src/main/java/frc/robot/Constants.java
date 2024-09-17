@@ -67,7 +67,7 @@ public final class Constants {
     public static final Measure<Distance> kDrivetrainWheelDiameter = Inches.of(6);    // 6in wheel diameter
     public static final double kDrivetrainGearRatio                = 10.71;                     // typical kitbot gear ratio
 
-    public static final int    kDrivetrainPulsesPerWheelRotation = 4096; // typical quadrature encoder - used for simulation
+    public static final int kDrivetrainEncoderResolution           = 4096; // typical quadrature encoder - used for simulation right now
   }
 
   public static class IntakeConstants {
