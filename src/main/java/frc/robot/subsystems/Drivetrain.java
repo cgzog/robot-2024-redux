@@ -26,6 +26,8 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.kinematics.Odometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N7;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 
@@ -103,7 +105,7 @@ public class Drivetrain extends SubsystemBase {
 
     private Field2d m_field = new Field2d();
 
-    private DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(m_gyro.GetRotation2d(),
+    private DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(m_gyro.getRotation2d(),
                                                                                  m_leftEncoder.getDistance(),
                                                                                  m_rightEncoder.getDistance(),
                                                                                  // 1M from wall, midfield, pointing towards other alliance
@@ -272,10 +274,6 @@ public class Drivetrain extends SubsystemBase {
     m_odometry.update(m_gyro.getRotation2d(),
                       m_leftEncoder.getDistance(),
                       m_rightEncoder.getDistance());
-
-    m_pose.update(m_gyro.getRotation2d(),
-                  m_leftEncoder.getDistance(),
-                  m_rightEncoder.getDistance())
 
     m_field.setRobotPose(m_odometry.getPoseMeters());
   }
