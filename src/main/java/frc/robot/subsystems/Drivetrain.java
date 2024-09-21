@@ -28,6 +28,7 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 
@@ -113,7 +114,11 @@ public class Drivetrain extends SubsystemBase {
 
     private DifferentialDriveKinematics m_diffDriveKinematics = new DifferentialDriveKinematics(DrivetrainConstants.kDrivetrainTrack.in(Meters));
 
-    private Pose2d m_pose;
+
+    private Transform2d m_IncTransform = new Transform2d(0.10, 0.10, new Rotation2d(0.050));
+    private Rotation2d m_rotation      = new Rotation2d();                 // for simulation "simulation"
+    private Pose2d m_pose              = new Pose2d(6.6, 1.9, m_rotation);     // move it around some during simulation
+
 
     private boolean m_driveTypeErrorPrinted = false;
 
@@ -161,12 +166,12 @@ public class Drivetrain extends SubsystemBase {
         m_leftRearMotor.follow(m_leftFrontMotor);
         m_rightRearMotor.follow(m_rightFrontMotor);
         
-        m_leftFrontMotor.stopMotor();       // just a safety thing - they should be stopped on instantiation
+        m_leftFrontMotor.stopMotor();                     // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
 
         SmartDashboard.putData("Field", m_field);     // display the field overhead view
 
-        if ( ! Robot.isReal()) {            // setup things for the simulation as needed
+        if ( ! Robot.isReal()) {                          // setup things for the simulation as needed
         
           // we'll just tell it we have a specific pulse count per rev of the wheel and calculate a distance for each pulse
           // calculate the wheel circuference and divide but the number of pulses per rotation
@@ -176,6 +181,8 @@ public class Drivetrain extends SubsystemBase {
 
           m_leftEncoderSim.setCount(0);
           m_rightEncoderSim.setCount(0);
+
+          m_field.setRobotPose(m_pose);
         }
     }
 
@@ -271,11 +278,24 @@ public class Drivetrain extends SubsystemBase {
     // This will get the simulated sensor readings that we set
     // in the previous article while in simulation, but will use
     // real values on the robot itself.
-    m_odometry.update(m_gyro.getRotation2d(),
-                      m_leftEncoder.getDistance(),
-                      m_rightEncoder.getDistance());
 
-    m_field.setRobotPose(m_odometry.getPoseMeters());
+    if ( ! Robot.isReal()) {
+
+      /* 
+      m_odometry.update(m_gyro.getRotation2d(),
+                        m_leftEncoder.getDistance(),
+                        m_rightEncoder.getDistance());
+
+      String output = "Rot: " + m_gyro.getRotation2d() + "  l: " + m_leftEncoder.getDistance() + "  r: " + m_rightEncoder.getDistance();
+      System.out.println(output);
+
+      m_field.setRobotPose(m_odometry.getPoseMeters());
+      */
+
+      m_field.setRobotPose(m_pose);
+
+      m_pose = m_pose.plus(m_IncTransform);
+    }
   }
 
 
