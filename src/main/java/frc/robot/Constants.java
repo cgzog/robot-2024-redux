@@ -22,7 +22,9 @@ public final class Constants {
 
     public static final Measure<Mass> kRobotMass = Pounds.of(100.0);
 
-    public static final double kRobotInertia = 7.0;   // not measured for this robot - typical 3-8 jKgM^2 range
+    public static final double kRobotInertia     = 7.0;   // not measured for this robot - typical 3-8 jKgM^2 range
+
+    public static final double kRobotNomVoltage  = 12.0;  // nominal voltage
   }
 
   public static class OperatorConstants {

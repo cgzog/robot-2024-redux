@@ -34,6 +34,7 @@ public class Robot extends TimedRobot {
     m_robotContainer = new RobotContainer();
   }
 
+
   /**
    * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
    * that you want ran during disabled, autonomous, teleoperated and test.
@@ -50,12 +51,15 @@ public class Robot extends TimedRobot {
     CommandScheduler.getInstance().run();
   }
 
+
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {}
 
+
   @Override
   public void disabledPeriodic() {}
+
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
@@ -68,9 +72,11 @@ public class Robot extends TimedRobot {
     }
   }
 
+
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {}
+
 
   @Override
   public void teleopInit() {
@@ -83,37 +89,13 @@ public class Robot extends TimedRobot {
     }
   }
 
+
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
 
-    double leftY, rightX, rightY;   // we don't get leftX since none of the supported drive modes for now need it - saves a litle time
-
-    // we always need the leftY value so we'll get it unconditionally
-    //
-    // we only get the right values for the specific drive mode that needs them to save a little time
-    
-    leftY = -m_robotContainer.m_driverController.getLeftY();     // invert since it returns negative for forward
-
-    switch (DrivetrainConstants.kDriveType) {
-
-      case DrivetrainConstants.kDriveArcade:    // both are handled the same
-      case DrivetrainConstants.kDriveCurvature:
-
-        rightX = m_robotContainer.m_driverController.getRightX();
-
-        m_robotContainer.m_drivetrain.drive(leftY, rightX, DrivetrainConstants.kDriveType);
-        break;
-
-      case DrivetrainConstants.kDriveTank:
-
-        rightY = -m_robotContainer.m_driverController.getRightY();   // invert
-
-        m_robotContainer.m_drivetrain.drive(leftY, rightY, DrivetrainConstants.kDriveType);
-        break;
-      }
-      
-    }
+    driveTheRobot();
+  }
 
   @Override
   public void testInit() {
@@ -121,15 +103,27 @@ public class Robot extends TimedRobot {
     CommandScheduler.getInstance().cancelAll();
   }
 
+
   /** This function is called periodically during test mode. */
   @Override
   public void testPeriodic() {}
+
 
   /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {}
 
+
   /** This function is called periodically whilst in simulation. */
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+
+    driveTheRobot(); // invoke the drive code from a real driverstaion during simulation
+  }
+
+
+  public void driveTheRobot() {
+
+    m_robotContainer.m_drivetrain.driveInputs(m_robotContainer.m_driverController);
+  }
 }

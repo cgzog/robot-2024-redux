@@ -35,6 +35,8 @@ import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+
 
 
 // SparkMax imports - these come from REV Robotics
@@ -110,14 +112,21 @@ public class Drivetrain extends SubsystemBase {
                                                                                  m_leftEncoder.getDistance(),
                                                                                  m_rightEncoder.getDistance(),
                                                                                  // 1M from wall, midfield, pointing towards other alliance
-                                                                                 new Pose2d(1.0, 13.5, new Rotation2d()));
+                                                                                 new Pose2d(1.35, 5.55, new Rotation2d(Math.PI)));
 
     private DifferentialDriveKinematics m_diffDriveKinematics = new DifferentialDriveKinematics(DrivetrainConstants.kDrivetrainTrack.in(Meters));
 
 
-    private Transform2d m_IncTransform = new Transform2d(0.10, 0.10, new Rotation2d(0.050));
-    private Rotation2d m_rotation      = new Rotation2d();                 // for simulation "simulation"
-    private Pose2d m_pose              = new Pose2d(6.6, 1.9, m_rotation);     // move it around some during simulation
+    // m_IncTransform is used for simulating inputs in simulation mode - it is applied to the robot pose in the periodic routine
+    // (only when simulation is active) to move the robot around the virtual field.
+    //
+    // should be uncommented when needed and once we get simulation nailed down, can probably be removed entirely.
+
+    // private Transform2d m_incTransform = new Transform2d(0.10, 0.10, new Rotation2d(0.050));
+
+    private Rotation2d m_rotation      = new Rotation2d(0.0);                // simulation starting rotation - 0.0 is downfield to other alliance wall
+
+    private Pose2d m_pose              = new Pose2d(6.6, 1.9, m_rotation);     // simulation starting pose - x, y, rotation
 
 
     private boolean m_driveTypeErrorPrinted = false;
@@ -184,63 +193,66 @@ public class Drivetrain extends SubsystemBase {
 
           m_field.setRobotPose(m_pose);
         }
+
+        System.out.println("Drivetrain instantiated! ---------------------------------------------------------------------------");
     }
 
 
 
     public void drive(double val1, double val2, int driveType) {
 
-        switch(driveType) {
-          
-            case DrivetrainConstants.kDriveArcade:
+      String output = "drive(" + val1 + ", " + val2 + ", " + driveType +")";
+      System.out.println(output);
 
-                // invert the side to side joystick
-                m_diffDrive.arcadeDrive(val1, -val2, DrivetrainConstants.kDriveSqInputs);
-                break;
+      switch(driveType) {
+        
+        case DrivetrainConstants.kDriveArcade:
 
-            case DrivetrainConstants.kDriveTank:
+          // invert the side to side joystick
+          m_diffDrive.arcadeDrive(val1, -val2, DrivetrainConstants.kDriveSqInputs);
+          break;
 
-                m_diffDrive.tankDrive(val1, val2, DrivetrainConstants.kDriveSqInputs);
-                break;
+        case DrivetrainConstants.kDriveTank:
 
-            case DrivetrainConstants.kDriveCurvature:
+          m_diffDrive.tankDrive(val1, val2, DrivetrainConstants.kDriveSqInputs);
+          break;
 
-                // curvatureDrive controls the rate of turning related to the robot speed
-                //
-                // it does not have a square input flag but I still think it's valuable so we'll manually apply it here
+        case DrivetrainConstants.kDriveCurvature:
 
-                if (val1 < 0.0) {
-                  val1 *= val1 * -1.0;    // maintain the sign as negative
-                } else {
-                  val1 *= val1;
-                }
+          // curvatureDrive controls the rate of turning related to the robot speed
+          //
+          // it does not have a square input flag but I still think it's valuable so we'll manually apply it here
 
-                if (val2 < 0.0) {
-                  val2 *= val2 * -1.0;
-                } else {
-                  val2 *= val2;
-                }
-
-                // enable turn in place
-                m_diffDrive.curvatureDrive(val1, val2, true);
-                break;
-
-            default:
-
-              // only need to print the message once when we encounter this error
-              //
-              // in the event of an invalid drive type, we will basically ignore this call
-              if (m_driveTypeErrorPrinted != true) {
-                  String errMsg;
-              
-                  errMsg = "Drivetrain: Drive: invalid drive type " + driveType;
-              
-                  System.err.println(errMsg);
-
-                  m_driveTypeErrorPrinted = true;
-              }
-              break;
+          if (val1 < 0.0) {
+            val1 *= val1 * -1.0;    // maintain the sign as negative
+          } else {
+            val1 *= val1;
           }
+
+          if (val2 < 0.0) {
+            val2 *= val2 * -1.0;
+          } else {
+            val2 *= val2;
+          }
+
+          // enable turn in place
+          m_diffDrive.curvatureDrive(val1, val2, true);
+          break;
+
+        default:
+
+          // only need to print the message once when we encounter this error
+          //
+          // in the event of an invalid drive type, we will basically ignore this call
+          if (m_driveTypeErrorPrinted != true) {
+
+            String errMsg = "Drivetrain: Drive: invalid drive type " + driveType;
+            System.err.println(errMsg);
+
+            m_driveTypeErrorPrinted = true;
+          }
+          break;
+        }
     }
 
 
@@ -281,20 +293,21 @@ public class Drivetrain extends SubsystemBase {
 
     if ( ! Robot.isReal()) {
 
-      /* 
       m_odometry.update(m_gyro.getRotation2d(),
                         m_leftEncoder.getDistance(),
                         m_rightEncoder.getDistance());
 
-      String output = "Rot: " + m_gyro.getRotation2d() + "  l: " + m_leftEncoder.getDistance() + "  r: " + m_rightEncoder.getDistance();
+      String output = "periodic():  Rot: " + m_gyro.getRotation2d() + "  l: " + m_leftEncoder.getDistance() + "  r: " + m_rightEncoder.getDistance();
+      System.out.println(output);
+      output = "periodic():  gpm:  " + m_odometry.getPoseMeters();
       System.out.println(output);
 
+
       m_field.setRobotPose(m_odometry.getPoseMeters());
-      */
 
-      m_field.setRobotPose(m_pose);
+      // m_field.setRobotPose(m_pose);
 
-      m_pose = m_pose.plus(m_IncTransform);
+      // m_pose = m_pose.plus(m_incTransform);
     }
   }
 
@@ -303,9 +316,14 @@ public class Drivetrain extends SubsystemBase {
   @Override
   public void simulationPeriodic() {
 
-    m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage(),
-                             getRightSpeed() * RobotController.getInputVoltage());
 
+
+    m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage() / RobotConstants.kRobotNomVoltage,
+                             getRightSpeed() * RobotController.getInputVoltage() / RobotConstants.kRobotNomVoltage);
+
+    String output = "simPer()):  ls: " + getLeftSpeed() + "  rs: " + getRightSpeed() + "  V: " + RobotController.getInputVoltage();
+    System.out.println(output);
+    
     // Advance the model by 20 ms. Note that if you are running this
     // subsystem in a separate thread or have changed the nominal timestep
     // of TimedRobot, this value needs to match it.
@@ -319,6 +337,9 @@ public class Drivetrain extends SubsystemBase {
     m_rightEncoderSim.setRate(m_diffDriveSim.getRightVelocityMetersPerSecond());
 
     m_gyroSim.setAngle(-m_diffDriveSim.getHeading().getDegrees());
+
+    output = "simPer()):  ld: " + m_leftEncoderSim.getDistance() + "  lr: " + m_leftEncoderSim.getRate() + "  ga: " + m_gyroSim.getAngle();
+    System.out.println(output);
   }
 
 
@@ -334,5 +355,35 @@ public class Drivetrain extends SubsystemBase {
   public double getRightSpeed() {
 
     return m_rightFrontMotor.get();
+  }
+
+
+  public void driveInputs(CommandXboxController controller) {
+
+    double leftY, rightX, rightY;   // we don't get leftX since none of the supported drive modes for now need it - saves a litle time
+
+    // we always need the leftY value so we'll get it unconditionally
+    //
+    // we only get the right values for the specific drive mode that needs them to save a little time
+    
+    leftY = -controller.getLeftY();     // invert since it returns negative for forward
+
+    switch (DrivetrainConstants.kDriveType) {
+
+      case DrivetrainConstants.kDriveArcade:    // both are handled the same
+      case DrivetrainConstants.kDriveCurvature:
+
+        rightX = controller.getRightX();
+
+        drive(leftY, rightX, DrivetrainConstants.kDriveType);
+        break;
+
+      case DrivetrainConstants.kDriveTank:
+
+        rightY = -controller.getRightY();   // invert
+
+        drive(leftY, rightY, DrivetrainConstants.kDriveType);
+        break;
+    }
   }
 }
