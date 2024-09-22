@@ -75,12 +75,12 @@ public class Drivetrain extends SubsystemBase {
     // private final RelativeEncoder m_leftEncoder  = m_leftFrontMotor.getEncoder();
     // private final RelativeEncoder m_rightEncoder = m_leftFrontMotor.getEncoder();
 
-    private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
+    private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup motor following later
 
 
-    // for now, just values from the examples - would need to measure this in real life using 'sysinfo'
-
-    // private final Matrix<N7, N1> m_measurementStdDevs = VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005);
+    // for now, just use the typical values for various jitters from the example in the doc - would measure this in real life using 'sysinfo' on the
+    // actual robot as part of our characterization process (very important for auto path following to map a "perfect" theoretical robot into
+    // an actul robot that has internal friction and inertia)
 
     private final DifferentialDrivetrainSim m_diffDriveSim = new DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
                                                                                            DrivetrainConstants.kDrivetrainGearRatio,
@@ -91,12 +91,6 @@ public class Drivetrain extends SubsystemBase {
                                                                                            VecBuilder.fill(0.001, 0.001, 0.001, 0.1,
                                                                                                            0.1, 0.005, 0.005));
 
-    /*
-    private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim.createKitbotSim(KitbotMotor.kDoubleNEOPerSide,
-                                                                                                       DifferentialDrivetrainSim.KitbotGearing.k10p71,
-                                                                                                       DifferentialDrivetrainSim.KitbotWheelSize.kSixInch,
-                                                                                                       null);
-    */
 
     // setup some quadrature encoders to instantiate the simulated encoders from - can't seem to do that from the SparkMax built-in encoder
 
@@ -111,8 +105,6 @@ public class Drivetrain extends SubsystemBase {
     private AnalogGyro m_gyro       = new AnalogGyro(1);
     private AnalogGyroSim m_gyroSim = new AnalogGyroSim(m_gyro);
 
-    // create the 2d field image we'll position the simulated robot on
-
     private Field2d m_field = new Field2d();
 
     private DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(m_gyro.getRotation2d(),
@@ -123,13 +115,6 @@ public class Drivetrain extends SubsystemBase {
 
     private DifferentialDriveKinematics m_diffDriveKinematics = new DifferentialDriveKinematics(DrivetrainConstants.kDrivetrainTrack.in(Meters));
 
-
-    // m_IncTransform is used for simulating inputs in simulation mode - it is applied to the robot pose in the periodic routine
-    // (only when simulation is active) to move the robot around the virtual field.
-    //
-    // should be uncommented when needed and once we get simulation nailed down, can probably be removed entirely.
-
-    // private Transform2d m_incTransform = new Transform2d(0.10, 0.10, new Rotation2d(0.050));
 
     private Rotation2d m_rotation      = new Rotation2d(0.0);                // simulation starting rotation - 0.0 is downfield to other alliance wall
 
@@ -196,10 +181,8 @@ public class Drivetrain extends SubsystemBase {
           m_rightEncoderSim.setCount(0);
 
           SmartDashboard.putData("Field", m_field);     // display the field overhead view
-          m_field.setRobotPose(m_pose);                     // show the starting position
+          m_field.setRobotPose(m_pose);                     // show the starting pose on the field
         }
-
-        System.out.println("Drivetrain instantiated! ---------------------------------------------------------------------------");
     }
 
 
@@ -292,9 +275,6 @@ public class Drivetrain extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // This will get the simulated sensor readings that we set
-    // in the previous article while in simulation, but will use
-    // real values on the robot itself.
 
     if ( ! Robot.isReal()) {
 
@@ -302,17 +282,8 @@ public class Drivetrain extends SubsystemBase {
                         m_leftEncoder.getDistance(),
                         m_rightEncoder.getDistance());
 
-      String output = "periodic():  Rot: " + m_gyro.getRotation2d() + "  l: " + m_leftEncoder.getDistance() + "  r: " + m_rightEncoder.getDistance();
-      System.out.println(output);
-      output = "periodic():  gpm:  " + m_odometry.getPoseMeters();
-      System.out.println(output);
-
-
+      // show the robot on the fidl in its latest pose
       m_field.setRobotPose(m_odometry.getPoseMeters());
-
-      // m_field.setRobotPose(m_pose);
-
-      // m_pose = m_pose.plus(m_incTransform);
     }
   }
 
@@ -324,10 +295,7 @@ public class Drivetrain extends SubsystemBase {
     // the inclusion of robot voltage maps the -1 to 1 "speed" value into voltage which setInputs uses
     // direction gets handled as part of the sign of the speed
     m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage(),
-                             -1.0 * getRightSpeed() * RobotController.getInputVoltage()); // invert right side
-
-    String output = "simPer(): ls: " + getLeftSpeed() + "  rs: " + getRightSpeed();
-    System.out.println(output);
+                             getRightSpeed() * RobotController.getInputVoltage()); // invert right side
     
     // Advance the model by 20 ms. Note that if you are running this
     // subsystem in a separate thread or have changed the nominal timestep
@@ -342,9 +310,6 @@ public class Drivetrain extends SubsystemBase {
     m_rightEncoderSim.setRate(m_diffDriveSim.getRightVelocityMetersPerSecond());
 
     m_gyroSim.setAngle(-m_diffDriveSim.getHeading().getDegrees());
-
-    output = "simPer()):  ld: " + m_leftEncoderSim.getDistance() + "  lr: " + m_leftEncoderSim.getRate() + "  ga: " + m_gyroSim.getAngle();
-    System.out.println(output);
   }
 
 
