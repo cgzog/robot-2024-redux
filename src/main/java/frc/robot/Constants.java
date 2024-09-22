@@ -24,7 +24,17 @@ public final class Constants {
 
     public static final double kRobotInertia     = 7.0;   // not measured for this robot - typical 3-8 jKgM^2 range
 
-    public static final double kRobotNomVoltage  = 12.0;  // nominal voltage
+    public static final Measure<Distance> kRobotWidth  = Inches.of(30); // for simmulation crash detection
+    public static final Measure<Distance> kRobotLength = Inches.of(30);
+    public static final Measure<Distance> kBumperWidth = Inches.of(6);  // how think are the bumpers?
+
+    public static final Measure<Voltage> kRobotNomVoltage = Volts.of(12.0);  // nominal voltage
+  }
+
+  public static class FieldConstants {
+
+    public static final Measure<Distance> kFieldXMax = Feet.of(53).plus(Inches.of(3));         // length from alliance wall to alliance wall
+    public static final Measure<Distance> kFieldYMax = Feet.of(26).plus(Inches.of(3));         // width of field
   }
 
   public static class OperatorConstants {
@@ -69,7 +79,8 @@ public final class Constants {
     public static final Measure<Distance> kDrivetrainWheelDiameter = Inches.of(6);    // 6in wheel diameter
     public static final double kDrivetrainGearRatio                = 10.71;                     // typical kitbot gear ratio
 
-    public static final int kDrivetrainEncoderResolution           = 4096; // typical quadrature encoder - used for simulation right now
+    public static final int kDrivetrainEncoderCPR                  = 360;                       // typical quadrature encoder used on a kitbot chassis
+                                                                                                // AndyMark E4T encoder
   }
 
   public static class IntakeConstants {

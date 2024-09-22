@@ -51,6 +51,7 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 import frc.robot.Robot;
 import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.DrivetrainConstants;
+import frc.robot.Constants.FieldConstants;
 
 
 
@@ -76,24 +77,26 @@ public class Drivetrain extends SubsystemBase {
 
     private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftFrontMotor, m_rightFrontMotor);    // setup following later
 
+
+    // for now, just values from the examples - would need to measure this in real life using 'sysinfo'
+
+    // private final Matrix<N7, N1> m_measurementStdDevs = VecBuilder.fill(0.001, 0.001, 0.001, 0.1, 0.1, 0.005, 0.005);
+
+    private final DifferentialDrivetrainSim m_diffDriveSim = new DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
+                                                                                           DrivetrainConstants.kDrivetrainGearRatio,
+                                                                                           RobotConstants.kRobotInertia,
+                                                                                           RobotConstants.kRobotMass.in(Kilograms),
+                                                                                           DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) / 2,
+                                                                                           DrivetrainConstants.kDrivetrainTrack.in(Meters),
+                                                                                           VecBuilder.fill(0.001, 0.001, 0.001, 0.1,
+                                                                                                           0.1, 0.005, 0.005));
+
     /*
-    // for now, we'll just make everything close to "perfect" - would need to measure this in real life using 'sysinfo'
-
-    private final Matrix<N7, N1> m_measurementStdDevs = VecBuilder.fill(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01);
-
-    private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim(DCMotor.getNEO(DrivetrainConstants.kNumOfMotorsPerSide),
-                                                                                       DrivetrainConstants.kDrivetrainGearRatio,
-                                                                                       RobotConstants.kRobotInertia,
-                                                                                       RobotConstants.kRobotMass.in(Kilograms),
-                                                                                       DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) / 2,
-                                                                                       DrivetrainConstants.kDrivetrainTrack.in(Meters),
-                                                                                       m_measurementStdDevs);
-    */
-
     private final DifferentialDrivetrainSim m_diffDriveSim = DifferentialDrivetrainSim.createKitbotSim(KitbotMotor.kDoubleNEOPerSide,
                                                                                                        DifferentialDrivetrainSim.KitbotGearing.k10p71,
                                                                                                        DifferentialDrivetrainSim.KitbotWheelSize.kSixInch,
                                                                                                        null);
+    */
 
     // setup some quadrature encoders to instantiate the simulated encoders from - can't seem to do that from the SparkMax built-in encoder
 
@@ -103,8 +106,12 @@ public class Drivetrain extends SubsystemBase {
     private final EncoderSim m_leftEncoderSim  = new EncoderSim(m_leftEncoder);
     private final EncoderSim m_rightEncoderSim = new EncoderSim(m_rightEncoder);
 
-    private AnalogGyro m_gyro = new AnalogGyro(1);
+    // for now, we'll create an analog gyro to associated with our simulated gyro
+
+    private AnalogGyro m_gyro       = new AnalogGyro(1);
     private AnalogGyroSim m_gyroSim = new AnalogGyroSim(m_gyro);
+
+    // create the 2d field image we'll position the simulated robot on
 
     private Field2d m_field = new Field2d();
 
@@ -149,10 +156,6 @@ public class Drivetrain extends SubsystemBase {
         m_rightFrontMotor.restoreFactoryDefaults();
         m_rightRearMotor.restoreFactoryDefaults();
 
-        m_leftEncoder.reset();   // make sure the encoders are zeroed out to start (they should be)
-        m_rightEncoder.reset();
-
-
         // since the motors are facing in the opposite direction, one side needs to be reversed
         //
         // if we consider the "left" side as we look from the rear of the robot (like we were driving it),
@@ -178,20 +181,22 @@ public class Drivetrain extends SubsystemBase {
         m_leftFrontMotor.stopMotor();                     // just a safety thing - they should be stopped on instantiation
         m_rightFrontMotor.stopMotor();
 
-        SmartDashboard.putData("Field", m_field);     // display the field overhead view
+        m_leftEncoder.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * Math.PI / DrivetrainConstants.kDrivetrainEncoderCPR);
+        m_rightEncoder.setDistancePerPulse(m_leftEncoder.getDistancePerPulse());    // get what we set; they always should be the same
 
         if ( ! Robot.isReal()) {                          // setup things for the simulation as needed
         
           // we'll just tell it we have a specific pulse count per rev of the wheel and calculate a distance for each pulse
           // calculate the wheel circuference and divide but the number of pulses per rotation
 
-          m_leftEncoderSim.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * Math.PI / DrivetrainConstants.kDrivetrainEncoderResolution);
+          m_leftEncoderSim.setDistancePerPulse(DrivetrainConstants.kDrivetrainWheelDiameter.in(Meters) * Math.PI / DrivetrainConstants.kDrivetrainEncoderCPR);
           m_rightEncoderSim.setDistancePerPulse(m_leftEncoderSim.getDistancePerPulse());    // get what we set; they always should be the same
 
           m_leftEncoderSim.setCount(0);
           m_rightEncoderSim.setCount(0);
 
-          m_field.setRobotPose(m_pose);
+          SmartDashboard.putData("Field", m_field);     // display the field overhead view
+          m_field.setRobotPose(m_pose);                     // show the starting position
         }
 
         System.out.println("Drivetrain instantiated! ---------------------------------------------------------------------------");
@@ -201,8 +206,8 @@ public class Drivetrain extends SubsystemBase {
 
     public void drive(double val1, double val2, int driveType) {
 
-      String output = "drive(" + val1 + ", " + val2 + ", " + driveType +")";
-      System.out.println(output);
+      // String output = "drive(" + val1 + ", " + val2 + ", " + driveType +")";
+      // System.out.println(output);
 
       switch(driveType) {
         
@@ -316,12 +321,12 @@ public class Drivetrain extends SubsystemBase {
   @Override
   public void simulationPeriodic() {
 
+    // the inclusion of robot voltage maps the -1 to 1 "speed" value into voltage which setInputs uses
+    // direction gets handled as part of the sign of the speed
+    m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage(),
+                             -1.0 * getRightSpeed() * RobotController.getInputVoltage()); // invert right side
 
-
-    m_diffDriveSim.setInputs(getLeftSpeed() * RobotController.getInputVoltage() / RobotConstants.kRobotNomVoltage,
-                             getRightSpeed() * RobotController.getInputVoltage() / RobotConstants.kRobotNomVoltage);
-
-    String output = "simPer()):  ls: " + getLeftSpeed() + "  rs: " + getRightSpeed() + "  V: " + RobotController.getInputVoltage();
+    String output = "simPer(): ls: " + getLeftSpeed() + "  rs: " + getRightSpeed();
     System.out.println(output);
     
     // Advance the model by 20 ms. Note that if you are running this
@@ -385,5 +390,84 @@ public class Drivetrain extends SubsystemBase {
         drive(leftY, rightY, DrivetrainConstants.kDriveType);
         break;
     }
+  }
+
+
+
+  // collision detection at the edge of the field
+  //
+  // for now, this is really rudimentary as we just use the middle of the robot width
+  // (which assumes a square robot) and we don't take into account the rotation of the
+  // robot (If it's rotated, the corners will hit first) - it does include a bumper
+  // width for fun
+  //
+  // using this will help keep the robot on the playing field during similation
+  //
+  // enhancing this check to take the robot rotation into account would be an interesting
+  // addition if someone was interested in doing that.  While we were at it, that could even
+  // be extended to take the non-rectangular field edges coming from the speaker and the
+  // loading station for each alliance.
+  //
+  // the details here are that it takes "inPose" as the incoming pose (where the
+  // robot thinks it "wants" to be), the returned pose is where the robot "should" be taking the field
+  // perimeter into acount.
+  //
+  // if there is no collision with the edge, inPose is returned
+  //
+  // if there is a collision with the edge(s) of the field, the returned pose is the pose that keeps the
+  // robot on the field
+  //
+  // WARNING:  Every time a collision is detected, a new pose is returned which will need to be reaped by
+  // the garbage collector
+
+  private Pose2d collisionCheck(Pose2d inPose) {
+
+    double x = inPose.getX();
+    double y = inPose.getY();
+
+    Rotation2d rotation = inPose.getRotation();
+
+    final double halfRobotWidth = RobotConstants.kRobotWidth.in(Meters) / 2 + RobotConstants.kBumperWidth.in(Meters);
+
+    boolean collisionDetected = false;
+
+
+    if (x < halfRobotWidth) {     // check for x collision at each end of the field
+      x = halfRobotWidth;
+      collisionDetected = true;
+    } else {
+      if (x < (FieldConstants.kFieldXMax.in(Meters) - halfRobotWidth)) {
+        x = FieldConstants.kFieldXMax.in(Meters) - halfRobotWidth;
+        collisionDetected = true;
+      }
+    }
+
+    if (y < halfRobotWidth) {     // check for y collisions
+      y = halfRobotWidth;
+      collisionDetected = true;
+    } else {
+      if (y > (FieldConstants.kFieldYMax.in(Meters) - halfRobotWidth)) {
+        y = FieldConstants.kFieldYMax.in(Meters) - halfRobotWidth;
+        collisionDetected =  true;    // y collision
+      }
+    }
+
+    // if collisionDetected is true, there was a collision detected and the values
+    // x and y reflect the updated robot locations we want to be at
+    //
+    // since we can't just "set" x and y values (or rotation values either) in a pose,
+    // we need to create a new pose and return that - that creates a new object which the
+    // garbage collector needs to cleanup at some point.  if that happens, the program will
+    // so this isn't something we want to do in actual teleop mode.  We probably won't see
+    // any pauses in short runs but if this is run for a "long" time (don't ask me what
+    // "long" is right now), eventually enough pose objects will be created and no longer
+    // used that they'll need to be collected.  if you want to know more about this topic
+    // including memory usage monitoring, see the FRC doc for more details.
+
+    if ( ! collisionDetected) {         // no collision - just return inPose
+      return inPose;
+    }
+
+    return new Pose2d(x, y, rotation);  // return a new pose that keeps us on the field
   }
 }
