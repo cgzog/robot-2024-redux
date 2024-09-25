@@ -89,6 +89,21 @@ public final class Constants {
 
   public static class ShooterConstants {
  
+    public static final int kShooterMotor_CANID  = 15;
+    public static final int kKickerMotor_CANID   = 16;
+    
+    public static final int kShooterShootSpeed   = 1000;      // RPM - set low for test setup beacsue all we want is to see them run
+    public static final int kKickerSpeed         = 500;
+
+    public static final double kPidP             = 0.5;       // would need to be tuned
+    public static final double kPidI             = 0.1;
+    public static final double kPidD             = 0.1;
+    public static final double kPidFF            = 0.1;
+    public static final double kPidIzone         = 0.0;
+    public static final double kPidOutputMin     = 0.0;
+    public static final double kPidOutputMax     = 0.3;       // low to prevent test rig damage
+
+    public static final Measure<Time> kShooterRunTime = Seconds.of(5);         // how long the shooter runs after shooting
   }
 
 }
