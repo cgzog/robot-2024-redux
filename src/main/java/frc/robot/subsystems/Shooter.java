@@ -80,8 +80,11 @@ public class Shooter extends SubsystemBase {
         m_shooterPidController.setFF(ShooterConstants.kPidFF);
         m_shooterPidController.setOutputRange(ShooterConstants.kPidOutputMin, ShooterConstants.kPidOutputMax);
 
+        m_pidSetPoint = 0;
+
         // display PID coefficients on SmartDashboard
         SmartDashboard.putNumber("Shooter Set Point", m_pidSetPoint);
+        SmartDashboard.putNumber("Shooter Actual RPM", 0.0);
         SmartDashboard.putNumber("Shooter P Gain", ShooterConstants.kPidP);
         SmartDashboard.putNumber("Shooter I Gain", ShooterConstants.kPidI);
         SmartDashboard.putNumber("Shooter D Gain", ShooterConstants.kPidD);
@@ -112,15 +115,47 @@ public class Shooter extends SubsystemBase {
         return;
      }
 
-     // if we're not stopping, we're going so set the target speed
-
+     m_shooterMotor.set(speed);
     }
 
 
 
-    public double getShooterSpeed() {
+    // symmetry with the kickerMotorOff to cleanly end the shooting sequence command
 
-      return m_shooterEncoder.getVelocity();      // return the RPM by default
+    public void shooterMotorOff() {
+
+      setShooterSpeed(0.0);
+    }
+
+
+
+    public double getShooterVelocity() {
+
+      return m_shooterEncoder.getVelocity();      // return the RPM - not power percentage
+    }
+
+
+
+    // we cvan handle the kicker speed here - once we know what it should be, we'll just set
+    // the constant and run it at that
+
+    public void kickerMotorOn() {
+
+      m_kickerMotor.set(ShooterConstants.kKickerSpeed);
+    }
+
+
+
+    public void KickerMotorOff() {
+
+      m_kickerMotor.stopMotor();
+    }
+
+
+
+    public double getKickerSpeed() {
+
+      return m_kickerMotor.get();       // returns power percentage - NOT velocity
     }
 
 
@@ -156,12 +191,13 @@ public class Shooter extends SubsystemBase {
   @Override
   public void periodic() {
 
+
     // read PID coefficients from SmartDashboard
     m_pidSetPoint  = SmartDashboard.getNumber("Shooter Set Point", 0);
 
-    double p  = SmartDashboard.getNumber("Shooter P Gain", 0);
-    double i  = SmartDashboard.getNumber("Shooter I Gain", 0);
-    double d  = SmartDashboard.getNumber("Shooter D Gain", 0);
+    double p   = SmartDashboard.getNumber("Shooter P Gain", 0);
+    double i   = SmartDashboard.getNumber("Shooter I Gain", 0);
+    double d   = SmartDashboard.getNumber("Shooter D Gain", 0);
     double iz  = SmartDashboard.getNumber("Shooter I Zone", 0);
     double ff  = SmartDashboard.getNumber("Shooter Feed Forward", 0);
     double max = SmartDashboard.getNumber("Shooter Max Output", 0);
@@ -169,19 +205,32 @@ public class Shooter extends SubsystemBase {
 
     // if PID coefficients on SmartDashboard have changed, write new values to controller
     if((p != m_pidP)) { m_shooterPidController.setP(p); m_pidP = p; }
-    if((i != m_pidIzone)) { m_shooterPidController.setI(i); m_pidI = i; }
+
+    if((i != m_pidI)) { m_shooterPidController.setI(i); m_pidI = i; }
+
     if((d != m_pidD)) { m_shooterPidController.setD(d); m_pidD = d; }
+
     if((iz != m_pidIzone)) { m_shooterPidController.setIZone(iz); m_pidIzone = iz; }
+
     if((ff != m_pidFF)) { m_shooterPidController.setFF(ff); m_pidFF = ff; }
+    
     if((max != m_pidOutputMax) || (min != m_pidOutputMin)) { 
       m_shooterPidController.setOutputRange(min, max); 
       m_pidOutputMin = min;
       m_pidOutputMax = max; 
     }
 
-    SmartDashboard.putNumber("Shooter Target RPM", m_pidSetPoint);
-    SmartDashboard.putNumber("Shooter Actual RPM", getShooterSpeed());
+    m_shooterPidController.setReference(m_pidSetPoint, CANSparkMax.ControlType.kVelocity);
 
+    SmartDashboard.putNumber("Shooter P Gain", p);
+    SmartDashboard.putNumber("Shooter I Gain", i);
+    SmartDashboard.putNumber("Shooter D Gain", d);
+    SmartDashboard.putNumber("Shooter I Zone", iz);
+    SmartDashboard.putNumber("Shooter Feed Forward", ff);
+    SmartDashboard.putNumber("Shooter Max Output", max);
+    SmartDashboard.putNumber("Shooter Min Output", min);
+    SmartDashboard.putNumber("Shooter Set Point", m_pidSetPoint);
+    SmartDashboard.putNumber("Shooter Actual RPM", Math.round(getShooterVelocity()));
   }
 
   @Override
